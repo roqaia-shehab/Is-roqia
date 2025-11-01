@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Timetable Generation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .status {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        .btn:hover {
+            background: #2980b9;
+        }
+        .btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+        .result {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+        .success {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        .error {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .stat-box {
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #3498db;
+        }
+        .stat-label {
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+        #log {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        .log-entry {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎓 Timetable Generation Test</h1>
+    
+    <div class="status">
+        <h2>Test the Fixed System</h2>
+        <p>This will test the updated CSP model that properly handles "Lecture and Lab" courses as TWO separate sessions.</p>
+        <p><strong>Expected:</strong> Should schedule ~142 sessions (90 courses + 52 extra lab sessions)</p>
+        
+        <button class="btn" id="generateBtn" onclick="testGenerate()">Generate Timetable</button>
+        <button class="btn" onclick="window.location.href='/'">Open Full System</button>
+    </div>
+    
+    <div class="result" id="result" style="display: none;">
+        <h2>Results</h2>
+        <div id="resultContent"></div>
+        <div class="stats" id="stats"></div>
+    </div>
+    
+    <div id="log"></div>
+    
+    <script>
+        const logDiv = document.getElementById('log');
+        
+        function log(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            const timestamp = new Date().toLocaleTimeString();
+            entry.innerHTML = `<span style="color: #95a5a6">[${timestamp}]</span> ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        async function testGenerate() {
+            const btn = document.getElementById('generateBtn');
+            const result = document.getElementById('result');
+            const resultContent = document.getElementById('resultContent');
+            const statsDiv = document.getElementById('stats');
+            
+            btn.disabled = true;
+            btn.textContent = 'Generating... Please wait (30-60 seconds)';
+            result.style.display = 'none';
+            logDiv.innerHTML = '';
+            
+            log('🚀 Starting timetable generation...', 'info');
+            log('📊 System will attempt to schedule ALL 90 courses', 'info');
+            log('⚠️ Courses with "Lecture and Lab" will create 2 sessions each', 'info');
+            
+            const startTime = Date.now();
+            
+            try {
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        timeout: 300
+                    })
+                });
+                
+                const data = await response.json();
+                const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+                
+                log(`✅ Generation completed in ${elapsed} seconds`, 'success');
+                
+                if (data.success || data.scheduled_courses > 0) {
+                    const percentage = (data.scheduled_courses / data.total_courses * 100).toFixed(1);
+                    
+                    resultContent.innerHTML = `
+                        <p class="success">✅ Successfully generated timetable!</p>
+                        <p><strong>Scheduled:</strong> ${data.scheduled_courses} out of ${data.total_courses} sessions (${percentage}%)</p>
+                        <p><strong>Note:</strong> Total sessions includes separate LECTURE and LAB sessions for "Lecture and Lab" courses</p>
+                    `;
+                    
+                    // Count unique courses
+                    const uniqueCourses = new Set(data.schedule.map(s => s.course_id));
+                    const lectureCount = data.schedule.filter(s => s.section_id === 'LECTURE').length;
+                    const labCount = data.schedule.filter(s => s.section_id === 'LAB').length;
+                    const regularCount = data.schedule.filter(s => s.section_id === 'S1').length;
+                    
+                    statsDiv.innerHTML = `
+                        <div class="stat-box">
+                            <div class="stat-value">${uniqueCourses.size}</div>
+                            <div class="stat-label">Unique Courses</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">${data.scheduled_courses}</div>
+                            <div class="stat-label">Total Sessions</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">${lectureCount}</div>
+                            <div class="stat-label">Lecture Sessions</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">${labCount}</div>
+                            <div class="stat-label">Lab Sessions</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">${regularCount}</div>
+                            <div class="stat-label">Regular Classes</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">${elapsed}s</div>
+                            <div class="stat-label">Generation Time</div>
+                        </div>
+                    `;
+                    
+                    log(`📈 Statistics:`, 'info');
+                    log(`   - Unique courses covered: ${uniqueCourses.size}/90`, 'info');
+                    log(`   - Lecture sessions: ${lectureCount}`, 'info');
+                    log(`   - Lab sessions: ${labCount}`, 'info');
+                    log(`   - Regular classes: ${regularCount}`, 'info');
+                    
+                } else {
+                    resultContent.innerHTML = `
+                        <p class="error">❌ Generation failed</p>
+                        <p>${data.error || data.message || 'Unknown error'}</p>
+                    `;
+                    log(`❌ Error: ${data.error || 'Unknown'}`, 'error');
+                }
+                
+                result.style.display = 'block';
+                
+            } catch (error) {
+                resultContent.innerHTML = `
+                    <p class="error">❌ Request failed</p>
+                    <p>${error.message}</p>
+                `;
+                result.style.display = 'block';
+                log(`❌ Exception: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Generate Again';
+            }
+        }
+        
+        // Auto-log on page load
+        window.addEventListener('load', () => {
+            log('✅ Test page loaded successfully', 'info');
+            log('💡 Click "Generate Timetable" to test the system', 'info');
+        });
+    </script>
+</body>
+</html>

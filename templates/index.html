@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="Roqia">
+    <meta name="copyright" content="© 2025 Roqia. All Rights Reserved.">
+    <title>CSP TimetableAI - Intelligent Scheduling System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-calendar-alt"></i>
+                    <h1>Roqaia &amp; Raneen CSP</h1>
+                </div>
+                <nav class="nav">
+                    <button class="nav-btn active" data-tab="dashboard">
+                        <i class="fas fa-home"></i> Dashboard
+                    </button>
+                    <button class="nav-btn" data-tab="timetable">
+                        <i class="fas fa-table"></i> Timetable
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            
+            <!-- Dashboard Tab -->
+            <section id="dashboard" class="tab-content active">
+                <div class="welcome-banner">
+                    <h2>Welcome to CSP TimetableAI</h2>
+                    <p>Generate optimized course schedules using advanced Constraint Satisfaction Problem (CSP) algorithms</p>
+                </div>
+
+                <!-- Data Summary Cards -->
+                <div class="cards-grid">
+                    <div class="card gradient-1">
+                        <div class="card-icon">
+                            <i class="fas fa-book"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3 id="courses-count">0</h3>
+                            <p>Courses</p>
+                        </div>
+                    </div>
+                    <div class="card gradient-2">
+                        <div class="card-icon">
+                            <i class="fas fa-chalkboard-teacher"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3 id="instructors-count">0</h3>
+                            <p>Instructors</p>
+                        </div>
+                    </div>
+                    <div class="card gradient-3">
+                        <div class="card-icon">
+                            <i class="fas fa-door-open"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3 id="rooms-count">0</h3>
+                            <p>Rooms</p>
+                        </div>
+                    </div>
+                    <div class="card gradient-4">
+                        <div class="card-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3 id="timeslots-count">0</h3>
+                            <p>Time Slots</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Generation Form -->
+                <div class="generation-section">
+                    <div class="section-card">
+                        <h3><i class="fas fa-cogs"></i> Generate Complete Timetable</h3>
+                        <p class="info-text">This will automatically schedule ALL courses in the dataset across all available time slots (Sunday-Thursday, 9:00 AM - 3:45 PM)</p>
+                        <form id="generation-form" class="generation-form">
+                            <div class="schedule-info">
+                                <h4>Schedule Coverage:</h4>
+                                <ul>
+                                    <li>✅ All days: Sunday, Monday, Tuesday, Wednesday, Thursday</li>
+                                    <li>✅ All time slots: 9:00-10:30, 10:45-12:15, 12:30-2:00, 2:15-3:45</li>
+                                    <li>✅ All qualified courses will be automatically scheduled</li>
+                                    <li>✅ Optimized for balanced distribution across all times</li>
+                                    <li>✅ Multiple attempts for best results</li>
+                                </ul>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-large">
+                                <i class="fas fa-rocket"></i> Generate Full Timetable
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Progress and Results -->
+                    <div id="generation-progress" class="section-card hidden">
+                        <h3><i class="fas fa-spinner fa-spin"></i> Generating Timetable...</h3>
+                        <div class="progress-bar">
+                            <div class="progress-fill"></div>
+                        </div>
+                        <p id="progress-message">Please wait while we optimize your schedule...</p>
+                    </div>
+
+                    <div id="generation-results" class="section-card hidden">
+                        <h3><i class="fas fa-check-circle"></i> Generation Complete!</h3>
+                        <div class="results-grid">
+                            <div class="result-item">
+                                <span class="result-label">Scheduled Courses:</span>
+                                <span class="result-value" id="result-scheduled">-</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">Total Courses:</span>
+                                <span class="result-value" id="result-total">-</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">Success Rate:</span>
+                                <span class="result-value" id="result-success">-</span>
+                            </div>
+                        </div>
+                        <div class="action-buttons">
+                            <button class="btn btn-primary" onclick="viewTimetable()">
+                                <i class="fas fa-eye"></i> View Timetable
+                            </button>
+                            <button class="btn btn-secondary" onclick="exportCSV()">
+                                <i class="fas fa-download"></i> Export CSV
+                            </button>
+                            <button class="btn btn-secondary" onclick="exportJSON()">
+                                <i class="fas fa-file-code"></i> Export JSON
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Timetable Tab -->
+            <section id="timetable" class="tab-content">
+                <div class="section-header">
+                    <h2><i class="fas fa-table"></i> Weekly Timetable</h2>
+                    <div class="view-controls">
+                        <label>Filter by Day:</label>
+                        <select id="filter-day">
+                            <option value="all">All Days</option>
+                            <option value="Sunday">Sunday</option>
+                            <option value="Monday">Monday</option>
+                            <option value="Tuesday">Tuesday</option>
+                            <option value="Wednesday">Wednesday</option>
+                            <option value="Thursday">Thursday</option>
+                        </select>
+                        <label>Filter by Type:</label>
+                        <select id="filter-type">
+                            <option value="all">All Types</option>
+                            <option value="lecture">Lectures Only</option>
+                            <option value="lab">Labs Only</option>
+                        </select>
+                        <input type="text" id="search-timetable" placeholder="Search by course, instructor, or room...">
+                    </div>
+                </div>
+                <div id="timetable-content">
+                    <div class="empty-state">
+                        <i class="fas fa-calendar-times"></i>
+                        <p>No timetable generated yet</p>
+                        <p class="small">Go to Dashboard to generate a new timetable</p>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 Roqia. All Rights Reserved. | <strong>CSP TimetableAI</strong> - Intelligent Scheduling System | Powered by CSP Algorithm</p>
+        </div>
+    </footer>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <!-- Edit Class Modal -->
+    <div id="editClassModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-edit"></i> Edit Class</h3>
+                <button class="modal-close" onclick="closeEditModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Course:</label>
+                    <input type="text" id="edit-course" readonly class="form-control-readonly">
+                </div>
+                <div class="form-group">
+                    <label>Day:</label>
+                    <select id="edit-day" class="form-control">
+                        <option value="Sunday">Sunday</option>
+                        <option value="Monday">Monday</option>
+                        <option value="Tuesday">Tuesday</option>
+                        <option value="Wednesday">Wednesday</option>
+                        <option value="Thursday">Thursday</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Time Slot:</label>
+                    <select id="edit-timeslot" class="form-control">
+                        <option value="9:00 AM - 10:30 AM">9:00 AM - 10:30 AM</option>
+                        <option value="10:45 AM - 12:15 PM">10:45 AM - 12:15 PM</option>
+                        <option value="12:30 PM - 2:00 PM">12:30 PM - 2:00 PM</option>
+                        <option value="2:15 PM - 3:45 PM">2:15 PM - 3:45 PM</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Room:</label>
+                    <select id="edit-room" class="form-control">
+                        <!-- Will be populated dynamically -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Instructor:</label>
+                    <select id="edit-instructor" class="form-control">
+                        <!-- Will be populated dynamically -->
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveClassEdit()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- jsPDF Library for PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
